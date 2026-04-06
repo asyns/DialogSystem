@@ -2,9 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using FishNet;
-using FishNet.Object;
-using InteractionBehavior;
 using UnityEngine;
 
 public class DialogController : MonoBehaviour
@@ -14,8 +11,6 @@ public class DialogController : MonoBehaviour
     public static event EventHandler<DialogEvent> OnStartDialogStatic = delegate {};
     public static event EventHandler<DialogEvent> OnEndDialog = delegate {};
 
-    public Dialogable CurrentDialogable { get; private set; }
-    public CharacterSystem.CharacterController CharacterController { get; private set; }
     protected const string NEXT_KEY = "Next";
 
     private DialogContainer _dialogGraph;
@@ -33,18 +28,11 @@ public class DialogController : MonoBehaviour
 
             if(_dialogGraph != null)
             {
-                // DialogEvent dialogEvent = CurrentDialogable == null ? null : new DialogEvent(CurrentDialogable.transform);
-
                 OnStartDialog(this, null);
                 OnStartDialogStatic(this, null);
 
-                NetworkSessionBase.Instance.LocalPlayer.Input.Controls.Default.LeftClick.Disable();
                 NodeLinkData data = _dialogGraph.NodeLinks.Find(x => x.PortName == NEXT_KEY); // find link between start node and first node
                 MoveToNode(data.TargetNodeGuid); // move to first node
-            }
-            else
-            {
-                NetworkSessionBase.Instance.LocalPlayer.Input.Controls.Default.LeftClick.Enable();
             }
         }
     }
@@ -52,61 +40,17 @@ public class DialogController : MonoBehaviour
     void Awake()
     {
         DialogUIController.OnDialogUIInstantiated += OnDialogUIInstantiated;
-
-        Talkable.OnTalkableInteractedWith += OnTalkableInteractedWith;
-        Readable.OnReadableInteractedWith += OnReadableInteractedWith;
-
-        Talkable.OnJoinConversation += OnStartListeningToConversation;
-
-        CutSceneDirector.OnCutsceneStarted += OnCutsceneStarted;
     }
 
     void OnDestroy()
     {
         DialogUIController.OnDialogUIInstantiated -= OnDialogUIInstantiated;
-        CutSceneDirector.OnCutsceneStarted -= OnCutsceneStarted;
-        CutSceneDirector.OnCutsceneEnded -= OnCutsceneEnded;
-        
         StopAllCoroutines();
-        Talkable.OnTalkableInteractedWith -= OnTalkableInteractedWith;
-        Readable.OnReadableInteractedWith -= OnReadableInteractedWith;
-        Talkable.OnJoinConversation -= OnStartListeningToConversation;
     }
 
-    private void OnCutsceneStarted(object sender, EventArgs e)
+    private void StartConversation(DialogContainer dialogGraph)
     {
-        CutSceneDirector cutSceneDirector = sender as CutSceneDirector;
-        PlayerNavAgentController groupLeader = NetworkSessionBase.Instance.LocalPlayer.Group.Leader;
-        StartConversation(null, cutSceneDirector.currentCutscene.dialog, groupLeader.CharacterController);
-        CutSceneDirector.OnCutsceneEnded += OnCutsceneEnded;
-    }
-
-    private void OnCutsceneEnded(object sender, EventArgs e)
-    {
-        CutSceneDirector.OnCutsceneEnded -= OnCutsceneEnded;
-        CloseDialog();
-    }
-
-    private void StartConversation(Dialogable dialogable, DialogContainer dialogGraph, CharacterSystem.CharacterController characterController)
-    {
-        CurrentDialogable = dialogable;
-        CharacterController = characterController;
         DialogGraph = dialogGraph;
-    }
-
-    private void JoinConversation(Dialogable dialogable, DialogContainer dialogGraph, string nodeID)
-    {
-        CurrentDialogable = dialogable;
-        int clientID = dialogable.interactingClientID.Value;
-        NetworkObject firstObject = InstanceFinder.ClientManager.Clients[clientID].FirstObject;
-        if(firstObject.TryGetComponent<NetworkedGroup>(out var networkedGroup))
-        {
-            CharacterController = networkedGroup.Group.Leader.CharacterController;            
-        }
-        DialogGraph = dialogGraph;
-        MoveToNode(nodeID);
-
-        CurrentDialogable.OnNodeIDChanged += OnNodeIDChanged;
     }
 
     private void OnNodeIDChanged(object sender, EventArgs e)
@@ -120,63 +64,14 @@ public class DialogController : MonoBehaviour
         dialogUIController.DialogController = this;
     }
 
-    private void OnReadableInteractedWith(object sender, DialogEvent e)
-    {
-        Readable readable = sender as Readable;
-
-        PlayerNavAgentController groupLeader = NetworkSessionBase.Instance.LocalPlayer.Group.Leader;
-        StartConversation(readable, e.dialogGraph, groupLeader.CharacterController);
-        StartCoroutine(TurnTowardsTarget(groupLeader.transform, readable.transform.parent));
-    }
-
-    private void OnTalkableInteractedWith(object sender, DialogEvent e)
-    {
-        Talkable talkable = sender as Talkable;
-
-        PlayerNavAgentController groupLeader = NetworkSessionBase.Instance.LocalPlayer.Group.Leader;
-        StartConversation(talkable, e.dialogGraph, groupLeader.CharacterController);
-        StartCoroutine(TurnTowardsTarget(groupLeader.transform, talkable.transform.parent));
-        StartCoroutine(TurnTowardsTarget(talkable.transform.parent.parent, groupLeader.transform));
-    }
-
-    private void OnStartListeningToConversation(object sender, DialogEvent e)
-    {
-        Talkable talkable = sender as Talkable;
-        JoinConversation(talkable, e.dialogGraph, e.nodeID);
-    }
-
-    private IEnumerator TurnTowardsTarget(Transform leader, Transform target)
-    {
-        if (target == null)
-        {
-            yield break; // Exit if there is no target
-        }
-        
-        float duration = .25f;
-        float time = 0;
-        Quaternion startRotation = leader.rotation;
-        Quaternion endRotation = Quaternion.LookRotation(target.position - leader.position);
-
-        while (time < duration)
-        {
-            time += Time.deltaTime;
-            float fraction = time / duration;
-            leader.rotation = Quaternion.Slerp(startRotation, endRotation, fraction);
-            yield return null;
-        }
-        leader.rotation = endRotation;
-    }
-
     /// <summary>
     /// We'll -never- MoveToNode when it's a ChoiceNode. ChoiceNodes are evaluated when MoveToNode is called for the previous DialogNode
     /// </summary>
     /// <param name="targetNodeGuid"></param>
     public void MoveToNode(string targetNodeGuid)
     {
-        CurrentDialogable.SetDialogNodeID(targetNodeGuid);    
         NodeData targetNode = _dialogGraph.FindNode(targetNodeGuid);
         List<NodeLinkData> nextLinks = _dialogGraph.FindNextLinksForNode(targetNode); // links from the current node
-        targetNode.HandleEvent(CurrentDialogable);
         switch(targetNode)
         {
             case DialogNodeData:
@@ -234,19 +129,14 @@ public class DialogController : MonoBehaviour
         switch (branchNodeData.Condition)
         {
             case BranchCondition.QuestDone:
-                result = NetworkSessionBase.Instance.LocalPlayer.Group.QuestManager.IsQuestDone(branchNodeData.Value);
                 break;
             case BranchCondition.QuestPickedUp:
-                result = NetworkSessionBase.Instance.LocalPlayer.Group.QuestManager.IsQuestActive(branchNodeData.Value);
                 break;
             case BranchCondition.HasItem:
-                result = CharacterController.inventory.HasNItems(branchNodeData.Value, branchNodeData.Quantity);
                 break;
             case BranchCondition.LevelReached:
-                result = CharacterController.Experience.HasLevel(branchNodeData.Value);
                 break;
             case BranchCondition.StatReached:
-                result = CharacterController.Stats.HasScore(branchNodeData.Value, branchNodeData.Stat);
                 break;
         }
 
@@ -262,14 +152,7 @@ public class DialogController : MonoBehaviour
 
     public void CloseDialog()
     {
-        if(CurrentDialogable != null)
-        {
-            CurrentDialogable.SetIsInteracting(false);
-        }
-        CurrentDialogable = null;
-        CharacterController = null;
         DialogGraph = null;
-        
         OnEndDialog(this, null);
     }
 

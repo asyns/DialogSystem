@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using FishNet.Object.Synchronizing;
 using UnityEngine;
 
 public class DialogEvent : EventArgs

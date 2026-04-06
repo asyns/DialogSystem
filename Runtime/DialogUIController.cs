@@ -2,13 +2,12 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using InteractionBehavior;
-using TMPro;
+using TMPro; 
 using UnityEngine;
 using UnityEngine.Localization.Components;
 using UnityEngine.Localization.Settings;
 using UnityEngine.UI;
-
+ 
 public class DialogUIController : MonoBehaviour
 {
     public static event EventHandler OnDialogUIInstantiated = delegate {};
@@ -45,8 +44,6 @@ public class DialogUIController : MonoBehaviour
 
     [Header("Prefabs")]
     [SerializeField] private GameObject choiceButtonPrefab;
-
-    private CharacterSystem.CharacterController playerCharacter;
 
     private const string INTERACTABLES_TABLE = "Interactables";
     private const string DIALOG_ELEMENTS_TABLE = "DialogElements"; 
@@ -97,10 +94,7 @@ public class DialogUIController : MonoBehaviour
             _dialogController.OnStartDialog -= OnStartDialog;
             _dialogController.OnNodeEnabled -= OnNodeEnabled;
         }
-        
         DialogController.OnEndDialog -= OnEndDialog;
-        AutoClosable.OnPlayerTooFarFromClosable -= OnPlayerTooFarFromTalkable;
-        NetworkSessionBase.Instance.LocalPlayer.Input.Controls.Default.EndTurn.performed -= OnSpacebarPressed;
     }
 
     private void OnStartDialog(object sender, DialogEvent e)
@@ -111,13 +105,8 @@ public class DialogUIController : MonoBehaviour
             return;
         }
         ClearCurrentDialog();
-        playerCharacter = _dialogController.CharacterController; //the character talking to this npc (but it's just the group leader actually)
 
         string dialogableName = string.Empty;
-        if(_dialogController.CurrentDialogable != null)
-        {
-            dialogableName = _dialogController.CurrentDialogable.transform.parent.parent.name;
-        }
 
         InitDialog(dialogableName, false);
     }
@@ -151,7 +140,6 @@ public class DialogUIController : MonoBehaviour
             titleText.text = "";
         }
 
-        AutoClosable.OnPlayerTooFarFromClosable += OnPlayerTooFarFromTalkable;
         DialogController.OnEndDialog += OnEndDialog;
     }
 
@@ -163,7 +151,6 @@ public class DialogUIController : MonoBehaviour
 
     private void OnPlayerTooFarFromTalkable(object sender, EventArgs e)
     {
-        AutoClosable.OnPlayerTooFarFromClosable -= OnPlayerTooFarFromTalkable;
         CloseDialogButton();
     }
 
@@ -185,8 +172,6 @@ public class DialogUIController : MonoBehaviour
 
         ClearChoices(); // remove old choices
 
-        SetDynamicPosition();
-
         string localizedText = LocalizationSettings.StringDatabase.GetLocalizedString(DIALOG_TABLE, nodeData.DialogText);
         string text = FormatText(localizedText);
 
@@ -197,51 +182,11 @@ public class DialogUIController : MonoBehaviour
         }));
     }
 
-    private void SetDynamicPosition()
-    {
-        if(playerCharacter == null)
-        {
-            return;
-        }
-
-        if(_dialogController.CurrentDialogable == null)
-        {
-            return;
-        }
-
-        float distance = Vector3.Distance(playerCharacter.transform.position, _dialogController.CurrentDialogable.transform.position);
-        if(distance > AWAY_DISTANCE)
-        {
-            //align to top of the screen
-            dialogPanelRT.anchorMin = new Vector2(0.5f, 1f);
-            dialogPanelRT.anchorMax = new Vector2(0.5f, 1f);
-            //set vertical offset
-            dialogPanelRT.anchoredPosition = new Vector2(0, -150);
-
-            choicePanel.transform.localPosition = new Vector3(choicePanel.transform.localPosition.x, -68, choicePanel.transform.localPosition.z);
-
-            choicePanelLayoutGroup.childAlignment = TextAnchor.UpperRight;
-        }
-        else
-        {
-            //align to bottom of the screen
-            dialogPanelRT.anchorMin = new Vector2(0.5f, 0f);
-            dialogPanelRT.anchorMax = new Vector2(0.5f, 0f);
-            //set vertical offset
-            dialogPanelRT.anchoredPosition = new Vector2(0, 150);
-
-            choicePanel.transform.localPosition = new Vector3(choicePanel.transform.localPosition.x, 59, choicePanel.transform.localPosition.z);
-
-            choicePanelLayoutGroup.childAlignment = TextAnchor.LowerRight;
-        }
-    }
-
     private IEnumerator DisplayText(string text, Action callback)
     {
         paragraphText.text = "";
 
         skipWaitTime = false;
-        NetworkSessionBase.Instance.LocalPlayer.Input.Controls.Default.EndTurn.performed += OnSpacebarPressed;
 
         foreach(char c in text)
         {
@@ -280,7 +225,6 @@ public class DialogUIController : MonoBehaviour
 
     private void OnSpacebarPressed(UnityEngine.InputSystem.InputAction.CallbackContext context)
     {
-        NetworkSessionBase.Instance.LocalPlayer.Input.Controls.Default.EndTurn.performed -= OnSpacebarPressed;
         skipWaitTime = true;
     }
 
@@ -316,7 +260,8 @@ public class DialogUIController : MonoBehaviour
 
     private string FormatText(string dialogText)
     {
-        return dialogText.Replace("<PlayerName>", playerCharacter.name);
+        // return dialogText.Replace("<PlayerName>", playerCharacter.name);
+        return dialogText;
     }
 
     internal void ShowTextPrompt()
@@ -419,23 +364,5 @@ public class DialogUIController : MonoBehaviour
         {
             Destroy(choice.gameObject);
         }
-    }
-
-    // public void BrowseInventoryPressed()
-    // {
-    //     if(_dialogController.CurrentNPC != null)
-    //     {
-    //         _dialogController.CurrentNPC.ShowInventory();
-    //     }
-    // }
-}
-
-public class QuestEventArgs : EventArgs
-{
-    public Quest quest; //the quest we're sending to the player
-
-    public QuestEventArgs(Quest quest)
-    {
-        this.quest = quest;
     }
 }

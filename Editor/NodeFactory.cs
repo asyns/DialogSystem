@@ -49,7 +49,6 @@ public class NodeFactory
                 break;
 
             case QuestNodeData questData:
-                args.name = questData.quest?.name;
                 node = new StartQuestNode(args);
                 break;
 

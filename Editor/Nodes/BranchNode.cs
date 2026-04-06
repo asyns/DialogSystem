@@ -4,7 +4,6 @@ using UnityEngine;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine.UIElements;
 using System;
-using Palmmedia.ReportGenerator.Core.Parser.Analysis;
 using UnityEditor;
 
 
@@ -124,7 +123,6 @@ public class BranchNode : BaseNode
         {
             case BranchCondition.QuestPickedUp:
             case BranchCondition.QuestDone:
-                CheckQuestName();
                 break;
             case BranchCondition.LevelReached:
                 title = $"Check level >= {StringValue}";
@@ -133,42 +131,7 @@ public class BranchNode : BaseNode
                 title = $"Check {StatsValue} >= {StringValue}";
                 break;
             case BranchCondition.HasItem:
-                CheckItemName();
                 break;
-        }
-    }
-
-    private void CheckItemName()
-    {
-        if(!string.IsNullOrEmpty(StringValue))
-        {
-            string pathToItem = $"Assets/Inventory System/Items/Resources/{StringValue}.asset";
-            Item item = (Item)AssetDatabase.LoadAssetAtPath(pathToItem, typeof(Item));
-            if(item != null)
-            {
-                title = $"Check Item: {QuantityValue}x {item.name}";
-            }
-            else
-            {
-                title = "Check Item: not found";
-            }
-        }
-    }
-
-    private void CheckQuestName()
-    {
-        if (!string.IsNullOrEmpty(StringValue))
-        {
-            string pathToQuest = $"Assets/Quest System/Quest Library/Resources/{StringValue}.asset";
-            Quest quest = (Quest)AssetDatabase.LoadAssetAtPath(pathToQuest, typeof(Quest));
-            if (quest != null)
-            {
-                title = $"Check Quest: {quest.name}";
-            }
-            else
-            {
-                title = "Check Quest: not found";
-            }
         }
     }
 

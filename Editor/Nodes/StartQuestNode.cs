@@ -19,7 +19,6 @@ public class StartQuestNode : BaseNode
     protected override string StyleSheetName => "QuestNode";
     protected override int MaxOutputNumber => 1;
 
-    public Quest Quest { get; private set; }
     private TextField _questNameField;
     private string _questName;
     public string QuestName
@@ -36,15 +35,6 @@ public class StartQuestNode : BaseNode
             if(!string.IsNullOrEmpty(_questName))
             {
                 string pathToQuest = "Assets/Quest System/Quest Library/Resources/" + _questName + ".asset";
-                Quest = (Quest)AssetDatabase.LoadAssetAtPath(pathToQuest, typeof(Quest));
-                if(Quest != null)
-                {
-                    title = "Start Quest: " + Quest.name;
-                }
-                else
-                {
-                    title = "Start Quest: quest not found";
-                }
             }
         }
     }
@@ -74,10 +64,6 @@ public class StartQuestNode : BaseNode
     public override NodeData SaveAsNodeData()
     {
         QuestNodeData data = ScriptableObject.CreateInstance<QuestNodeData>();
-        if(Quest != null)
-        {
-            data.quest = Quest;
-        }
         return data;
     }
 }
