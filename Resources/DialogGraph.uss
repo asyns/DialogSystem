@@ -1,0 +1,21 @@
+GridBackground {
+	--grid-background-color: #282828;
+	--line-color: rgba(193,196,192,0.1);
+	--thick-line-color: rgba(193,196,192,0.1);
+	--spacing: 10;
+}
+DialogNode #output {
+    max-width: 75%;
+}
+
+DialogNode #top TextField {
+	max-width:28%;
+}
+
+StartQuestNode #output {
+    max-width: 75%;
+}
+
+StartQuestNode #top TextField {
+	max-width:28%;
+}

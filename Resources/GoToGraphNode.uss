@@ -1,0 +1,9 @@
+GoToGraphNode {
+	max-width:250px;
+}
+
+GoToGraphNode #title{
+	background-color: rgb(46, 147, 169);
+	padding:25px;
+	height:80px;
+}

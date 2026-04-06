@@ -1,0 +1,9 @@
+EntryNode #title{
+	background-color: rgb(21, 116, 17);
+}
+
+EntryNode #title-label {
+	color: rgb(255, 255, 255);
+	font-size:15px;
+	-unity-font-style: bold;
+}

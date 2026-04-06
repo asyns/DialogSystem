@@ -1,0 +1,10 @@
+{
+  "name": "com.asynsstudio.dialogsystem",
+  "version": "1.0.0",
+  "displayName": "Dialog System",
+  "description": "A lightweight, custom dialogue system for Unity.",
+  "unity": "6000.0",
+  "author": {
+    "name": "Asyns"
+  }
+}

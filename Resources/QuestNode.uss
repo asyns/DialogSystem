@@ -1,0 +1,27 @@
+StartQuestNode {
+	max-width:600px;
+}
+
+StartQuestNode #title{
+	background-color: rgb(197, 157, 70);
+	padding:25px;
+	height:80px;
+}
+
+StartQuestNode #title-label {
+	max-width:500px;
+	white-space: normal;
+	color: white;
+	font-size:18px;
+	-unity-font-definition: url('project:/Assets/Fonts/Resources/UNAGEO.ttf');
+}
+
+DialogOutputPort #unity-text-input {
+	font-size:18px;
+	color: white;
+	-unity-font-definition: url('project:/Assets/Fonts/Resources/UNAGEO.ttf');
+}
+
+DialogOutputPort #unity-text-input .unity-text-element {
+	font-size:15px;
+}
