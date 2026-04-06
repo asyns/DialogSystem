@@ -4,7 +4,15 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-public class DialogController : MonoBehaviour
+public interface IDialogController
+{
+    event EventHandler<DialogEvent> OnStartDialog;
+    event EventHandler<DialogEvent> OnNodeEnabled;
+    void StartConversation(DialogContainer dialogGraph);
+    void StopConversation();
+}
+
+public class DialogController : MonoBehaviour, IDialogController
 {
     public event EventHandler<DialogEvent> OnStartDialog = delegate {};
     public event EventHandler<DialogEvent> OnNodeEnabled = delegate {};
@@ -17,7 +25,7 @@ public class DialogController : MonoBehaviour
     public DialogContainer DialogGraph
     {
         get => _dialogGraph;
-        set 
+        private set 
         {
             if(_dialogGraph == value)
             {
@@ -37,25 +45,20 @@ public class DialogController : MonoBehaviour
         }
     }
 
-    void Awake()
+    protected virtual void Awake()
     {
         DialogUIController.OnDialogUIInstantiated += OnDialogUIInstantiated;
     }
 
-    void OnDestroy()
+    protected virtual void OnDestroy()
     {
         DialogUIController.OnDialogUIInstantiated -= OnDialogUIInstantiated;
         StopAllCoroutines();
     }
 
-    private void StartConversation(DialogContainer dialogGraph)
+    public void StartConversation(DialogContainer dialogGraph)
     {
         DialogGraph = dialogGraph;
-    }
-
-    private void OnNodeIDChanged(object sender, EventArgs e)
-    {
-        throw new NotImplementedException();
     }
 
     private void OnDialogUIInstantiated(object sender, EventArgs e)
@@ -84,7 +87,7 @@ public class DialogController : MonoBehaviour
                 break;
             
             case ExitNodeData:
-                CloseDialog();
+                StopConversation();
                 break;
             
             default:
@@ -113,33 +116,21 @@ public class DialogController : MonoBehaviour
                 // Outputs from the choice node are the different possible choices
                 choices = _dialogGraph.FindNextLinksForNode(nextNode);
             }
+            else if (nextNode is ExitNodeData)
+            {
+                // No choices, but we want to show the Close button, so we return empty choices
+            }
             else // else next link is "Continue" to another type of node
             {
                 choices.Add(nextLinks[0]);
             }
         }
-        // or only show Close button if there's 0 nextLinks
-
         OnNodeEnabled(this, new DialogEvent(targetNode, choices));
     }
 
-    private int HandleBranch(BranchNodeData branchNodeData)
+    protected virtual int HandleBranch(BranchNodeData branchNodeData)
     {
         bool result = false;
-        switch (branchNodeData.Condition)
-        {
-            case BranchCondition.QuestDone:
-                break;
-            case BranchCondition.QuestPickedUp:
-                break;
-            case BranchCondition.HasItem:
-                break;
-            case BranchCondition.LevelReached:
-                break;
-            case BranchCondition.StatReached:
-                break;
-        }
-
         int linkIndex = result ? 0 : 1; // First output of node == "true"
                                     // Second output of node == "false"
         return linkIndex;
@@ -150,14 +141,9 @@ public class DialogController : MonoBehaviour
         Debug.Log("ConfirmTextPrompt");
     }
 
-    public void CloseDialog()
+    public void StopConversation()
     {
         DialogGraph = null;
         OnEndDialog(this, null);
-    }
-
-    public void HandleExposedProperty(NodeLinkData choice, string exposedRelatedProperty)
-    {
-        Debug.Log("HandleExposedProperty:" + exposedRelatedProperty);
     }
 }

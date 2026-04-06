@@ -10,6 +10,7 @@ public class DialogContainer : ScriptableObject
     public List<NodeLinkData> NodeLinks = new List<NodeLinkData>();
     public List<NodeData> NodeData = new List<NodeData>();
     public List<ExposedProperty> ExposedProperties = new List<ExposedProperty>();
+    public DialogPosition Position;
 
     public NodeData FindNode(string targetNodeGuid)
     {
@@ -29,4 +30,13 @@ public class DialogContainer : ScriptableObject
     {
         return NodeLinks.Where(x => x.BaseNodeGuid == node.Guid).ToList();
     }
+}
+
+public enum DialogPosition
+{
+    Top,
+    Right,
+    Bottom,
+    Left,
+    Center
 }

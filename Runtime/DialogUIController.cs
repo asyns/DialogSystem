@@ -54,32 +54,48 @@ public class DialogUIController : MonoBehaviour
 
     private const char SPECIAL_COMMAND = '\\';
     private const char PAUSE_COMMAND = 'p';
-    private bool isSpecialCharacter = false; 
-    private bool skipWaitTime = false;
+    private bool _isSpecialCharacter = false; 
+    private bool _skipWaitTime = false;
 
     private const float TIME_BETWEEN_LETTERS = 0.02f;
     private const float PAUSE_DURATION = .6f;
-    private const float AWAY_DISTANCE = 6.0f;
 
     //position changes
-    RectTransform dialogPanelRT;
-    RectTransform titleTextRT;
-    VerticalLayoutGroup choicePanelLayoutGroup;
-    CanvasGroup choiceCanvasGroup; 
-    private DialogNodeData displayedNode; //to avoid displaying the same node multiple times at once
+    private RectTransform _dialogPanelRT;
+    private RectTransform _titleTextRT;
+    private RectTransform _choicePanelRT;
+    private VerticalLayoutGroup _choicePanelLayoutGroup;
+    private CanvasGroup _choiceCanvasGroup; 
+    private DialogNodeData _displayedNode; //to avoid displaying the same node multiple times at once
+    private Dictionary<DialogPosition, DialogElementPosition> dialogPositionSettings = new Dictionary<DialogPosition, DialogElementPosition>();
 
-
+    private class DialogElementPosition
+    {
+        public Vector2 textAnchor;
+        public Vector2 choicesAnchor;
+        public Vector2 choicesPivot;
+        public TextAnchor choicePanelAlignment;
+        public Vector2 titleAnchor;
+        public Vector2 titlePivot;
+        public TextAlignmentOptions titleAlignment;
+        public TextAlignmentOptions textAlignment;
+    }
+    
     void Awake()
     {
-        dialogPanelRT = dialogPanel.transform as RectTransform;
-        titleTextRT = titleText.transform as RectTransform;
+        _dialogPanelRT = dialogPanel.transform as RectTransform;
+        _titleTextRT = titleText.transform as RectTransform;
+        _choicePanelRT = choicePanel.transform as RectTransform;
+        
         titleLocalizeStringEvent = titleText.GetComponent<LocalizeStringEvent>();
-        choicePanelLayoutGroup = choicePanel.GetComponent<VerticalLayoutGroup>();
-        choiceCanvasGroup = choicePanel.GetComponent<CanvasGroup>();
+        _choicePanelLayoutGroup = choicePanel.GetComponent<VerticalLayoutGroup>();
+        _choiceCanvasGroup = choicePanel.GetComponent<CanvasGroup>();
 
         inputFieldPanel.SetActive(false);
         dialogPanel.SetActive(false);
         choicePanel.SetActive(false);
+
+        InitElementPositions();
     }
 
     void Start()
@@ -95,6 +111,68 @@ public class DialogUIController : MonoBehaviour
             _dialogController.OnNodeEnabled -= OnNodeEnabled;
         }
         DialogController.OnEndDialog -= OnEndDialog;
+    }
+
+    private void InitElementPositions()
+    {
+        dialogPositionSettings = new Dictionary<DialogPosition, DialogElementPosition>()
+        {
+            [DialogPosition.Top] = new DialogElementPosition()
+            {
+                titleAnchor = new Vector2(0, 0),
+                titlePivot = new Vector2(1, 0),
+                textAnchor = new Vector2(0.5f, 1),
+                choicesAnchor = new Vector2(1, 0),
+                choicesPivot = new Vector2(1, 1),
+                choicePanelAlignment = TextAnchor.UpperRight,
+                titleAlignment = TextAlignmentOptions.BottomRight,
+                textAlignment = TextAlignmentOptions.MidlineLeft,
+            },
+            [DialogPosition.Right] = new DialogElementPosition()
+            {
+                titleAnchor = new Vector2(1, 1),
+                titlePivot = new Vector2(1, 0),
+                textAnchor = new Vector2(1, 0.5f),
+                choicesAnchor = new Vector2(1, 0),
+                choicesPivot = new Vector2(1, 1),
+                choicePanelAlignment = TextAnchor.UpperRight,
+                titleAlignment = TextAlignmentOptions.BottomRight,
+                textAlignment = TextAlignmentOptions.MidlineRight,
+            },
+            [DialogPosition.Bottom] = new DialogElementPosition()
+            {
+                titleAnchor = new Vector2(0, 0),
+                titlePivot = new Vector2(1, 0),
+                textAnchor = new Vector2(0.5f, 0),
+                choicesAnchor = new Vector2(1, 1),
+                choicesPivot = new Vector2(1, 0),
+                choicePanelAlignment = TextAnchor.LowerRight,
+                titleAlignment = TextAlignmentOptions.BottomRight,
+                textAlignment = TextAlignmentOptions.MidlineLeft,
+            },
+            [DialogPosition.Left] = new DialogElementPosition()
+            {
+                titleAnchor = new Vector2(0, 1),
+                titlePivot = new Vector2(0, 0),
+                textAnchor = new Vector2(0, 0.5f),
+                choicesAnchor = new Vector2(0, 0),
+                choicesPivot = new Vector2(0, 1),
+                choicePanelAlignment = TextAnchor.UpperLeft,
+                titleAlignment = TextAlignmentOptions.BottomLeft,
+                textAlignment = TextAlignmentOptions.MidlineLeft,
+            },
+            [DialogPosition.Center] = new DialogElementPosition()
+            {
+                titleAnchor = new Vector2(0, 0),
+                titlePivot = new Vector2(1, 0),
+                textAnchor = new Vector2(0.5f, 0.5f),
+                choicesAnchor = new Vector2(1, 0),
+                choicesPivot = new Vector2(1, 1),
+                choicePanelAlignment = TextAnchor.UpperRight,
+                titleAlignment = TextAlignmentOptions.BottomRight,
+                textAlignment = TextAlignmentOptions.Midline,
+            }
+        };
     }
 
     private void OnStartDialog(object sender, DialogEvent e)
@@ -156,12 +234,12 @@ public class DialogUIController : MonoBehaviour
 
     private void DisplayNode(DialogNodeData nodeData, List<NodeLinkData> choices)
     {
-        if(displayedNode == nodeData) 
+        if(_displayedNode == nodeData) 
         {
             return;
         }
 
-        displayedNode = nodeData;
+        _displayedNode = nodeData;
 
         //hide prompt box
         inputFieldPanel.SetActive(false);
@@ -169,6 +247,8 @@ public class DialogUIController : MonoBehaviour
         //show dialog panel and choice
         dialogPanel.SetActive(true);
         choicePanel.SetActive(true);
+        
+        SetDynamicPosition();
 
         ClearChoices(); // remove old choices
 
@@ -182,22 +262,42 @@ public class DialogUIController : MonoBehaviour
         }));
     }
 
+    private void SetDynamicPosition()
+    {
+        DialogPosition position = _dialogController.DialogGraph.Position;
+        DialogElementPosition elementPosition = dialogPositionSettings[position];
+        SetAnchorAndPivot(_titleTextRT, elementPosition.titleAnchor, elementPosition.titlePivot);
+        SetAnchorAndPivot(_dialogPanelRT, elementPosition.textAnchor, elementPosition.textAnchor);
+        SetAnchorAndPivot(_choicePanelRT, elementPosition.choicesAnchor, elementPosition.choicesPivot);
+        _choicePanelLayoutGroup.childAlignment = elementPosition.choicePanelAlignment;
+        titleText.alignment = elementPosition.titleAlignment;
+        paragraphText.alignment = elementPosition.textAlignment;
+    }
+
+    private void SetAnchorAndPivot(RectTransform rt, Vector2 anchor, Vector2 pivot)
+    {
+        rt.anchorMin = anchor;
+        rt.anchorMax = anchor;
+        rt.pivot = pivot;
+        rt.anchoredPosition = Vector2.zero;
+    }
+
     private IEnumerator DisplayText(string text, Action callback)
     {
         paragraphText.text = "";
 
-        skipWaitTime = false;
+        _skipWaitTime = false;
 
         foreach(char c in text)
         {
-            if(skipWaitTime)
+            if(_skipWaitTime)
             {
                 break;
             }
             yield return ProcessCharacter(c);
         }
 
-        if(skipWaitTime)
+        if(_skipWaitTime)
         {
             paragraphText.text = RemoveCommands(text);
         }
@@ -225,19 +325,19 @@ public class DialogUIController : MonoBehaviour
 
     private void OnSpacebarPressed(UnityEngine.InputSystem.InputAction.CallbackContext context)
     {
-        skipWaitTime = true;
+        _skipWaitTime = true;
     }
 
     private IEnumerator ProcessCharacter(char c)
     {
-        if(isSpecialCharacter)
+        if(_isSpecialCharacter)
         {
-            isSpecialCharacter = false;
+            _isSpecialCharacter = false;
             yield return HandleSpecialCharacter(c);
         }
         else if(c.Equals(SPECIAL_COMMAND))
         {
-            isSpecialCharacter = true;
+            _isSpecialCharacter = true;
         }
         else
         {
@@ -266,7 +366,7 @@ public class DialogUIController : MonoBehaviour
 
     internal void ShowTextPrompt()
     {
-        dialogPanel.SetActive(false);//hide ui
+        dialogPanel.SetActive(false); //hide ui
         choicePanel.SetActive(false);
         inputFieldPanel.SetActive(true); //show prompt box
     }
@@ -278,7 +378,7 @@ public class DialogUIController : MonoBehaviour
 
     private void DisplayChoices(List<NodeLinkData> choices)
     {
-        choiceCanvasGroup.alpha = 0;
+        _choiceCanvasGroup.alpha = 0;
         //No next node -> Display Close Button
         if (choices.Count == 0)
         {
@@ -307,12 +407,12 @@ public class DialogUIController : MonoBehaviour
         // LayoutRebuilder.ForceRebuildLayoutImmediate(choicePanel.transform as RectTransform);
         LayoutRebuilder.ForceRebuildLayoutImmediate(choicePanel.transform as RectTransform);
         
-        StartCoroutine(LetChoicesAppear());
+        StartCoroutine(ShowChoices());
     }
 
     private void CloseDialogButton()
     {
-        DialogController.CloseDialog();
+        DialogController.StopConversation();
         CloseDialogUI();
     }
 
@@ -320,18 +420,18 @@ public class DialogUIController : MonoBehaviour
     {
         StopAllCoroutines();
 
-        displayedNode = null;
+        _displayedNode = null;
 
         inputFieldPanel.SetActive(false);
         dialogPanel.SetActive(false);
         choicePanel.SetActive(false);
     }
 
-    private IEnumerator LetChoicesAppear()
+    private IEnumerator ShowChoices()
     {
-        while(choiceCanvasGroup.alpha < 1)
+        while(_choiceCanvasGroup.alpha < 1)
         {
-            choiceCanvasGroup.alpha += Time.deltaTime;
+            _choiceCanvasGroup.alpha += Time.deltaTime;
             yield return null;
         }
         LayoutRebuilder.MarkLayoutForRebuild(transform as RectTransform);
@@ -354,7 +454,6 @@ public class DialogUIController : MonoBehaviour
         choiceButton.GetComponent<Button>().onClick.AddListener(() => { listener(); });
 
         LayoutRebuilder.ForceRebuildLayoutImmediate(choiceButton.transform as RectTransform);
-        // LayoutRebuilder.MarkLayoutForRebuild(choicePanel.transform as RectTransform);
     }
 
 
